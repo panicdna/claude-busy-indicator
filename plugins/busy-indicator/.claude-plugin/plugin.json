@@ -1,0 +1,25 @@
+{
+  "name": "busy-indicator",
+  "version": "1.0.0",
+  "description": "Desktop video busy indicator for Claude Code on WSL2/WSLg. Spawns an mpv window while Claude is working and kills it when done. Bundles the 'install-busy-indicator' and 'uninstall-busy-indicator' skills.",
+  "author": {
+    "name": "panicdna"
+  },
+  "maintainer": {
+    "name": "panicdna",
+    "url": "https://github.com/panicdna"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/panicdna/claude-busy-indicator",
+  "repository": "https://github.com/panicdna/claude-busy-indicator.git",
+  "keywords": [
+    "hooks",
+    "wsl",
+    "wslg",
+    "mpv",
+    "busy-indicator",
+    "desktop",
+    "visual-feedback"
+  ],
+  "category": "developer-tools"
+}

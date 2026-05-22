@@ -1,0 +1,15 @@
+{
+  "name": "panicdna-claude-busy-indicator",
+  "owner": {
+    "name": "panicdna",
+    "url": "https://github.com/panicdna"
+  },
+  "description": "A Claude Code skills marketplace for the desktop busy indicator (WSL2/WSLg mpv hook). Bundles install/uninstall skills.",
+  "plugins": [
+    {
+      "name": "busy-indicator",
+      "source": "./plugins/busy-indicator",
+      "description": "Desktop video busy indicator for Claude Code on WSL2/WSLg. Bundles the 'install-busy-indicator' and 'uninstall-busy-indicator' skills."
+    }
+  ]
+}
