@@ -1,0 +1,25 @@
+{
+  "name": "animal-busy-indicator",
+  "version": "1.0.0",
+  "description": "Transparent pixel-art animal overlay busy indicator for Claude Code. A running cat/dog/fox/rabbit appears on a screen-edge strip while Claude is working and disappears when done. Bundles the 'install-animal-busy-indicator' and 'uninstall-animal-busy-indicator' skills.",
+  "author": {
+    "name": "panicdna"
+  },
+  "maintainer": {
+    "name": "panicdna",
+    "url": "https://github.com/panicdna"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/panicdna/claude-busy-indicator",
+  "repository": "https://github.com/panicdna/claude-busy-indicator.git",
+  "keywords": [
+    "hooks",
+    "electron",
+    "overlay",
+    "pixel-art",
+    "busy-indicator",
+    "desktop",
+    "visual-feedback"
+  ],
+  "category": "developer-tools"
+}

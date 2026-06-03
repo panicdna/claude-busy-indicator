@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// ── 설정 파싱 ──────────────────────────────────────────────────
+const args = process?.argv || [];
+let config = { character: 'cat', position: 'bottom', size: 64, speed: 3, theme: 'transparent' };
+let winW = window.innerWidth, winH = window.innerHeight;
+
+for (const a of args) {
+  if (a.startsWith('--config=')) {
+    try { Object.assign(config, JSON.parse(a.slice(9))); } catch(_) {}
+  }
+  if (a.startsWith('--winW=')) winW = parseInt(a.slice(7));
+  if (a.startsWith('--winH=')) winH = parseInt(a.slice(7));
+}
+
+const canvas = document.getElementById('c');
+canvas.width  = winW;
+canvas.height = winH;
+const ctx = canvas.getContext('2d');
+
+// ── 픽셀아트 스프라이트 정의 ───────────────────────────────────
+// 각 캐릭터: 프레임 배열, 각 프레임은 [색상코드, 픽셀행렬] 형식
+// 색상 팔레트 (인덱스 방식)
+const PALETTES = {
+  cat: ['', '#f4a26088', '#f4a260', '#2d1b00', '#ff9999', '#ffffff', '#888888', '#ffcc88'],
+  //        0=투명   1=몸반투명   2=몸        3=눈/코    4=혀       5=흰       6=회색     7=밝은오렌지
+  dog: ['', '#c8934488', '#c89344', '#3d2000', '#ff9999', '#ffffff', '#a0622a', '#e8b870'],
+  fox: ['', '#e8622088', '#e86220', '#2d1b00', '#ffffff', '#ff6644', '#cc4400', '#ffcc88'],
+  rabbit: ['', '#e8c8e888', '#e8c8e8', '#2d1b00', '#ffaabb', '#ffffff', '#cc99cc', '#ffddee'],
+};
+
+// 8×8 픽셀 스프라이트 프레임 (0=투명, 숫자=팔레트 인덱스)
+// 달리는 모션 4프레임
+const SPRITES = {
+  cat: [
+    // frame 0 - 앞다리 앞
+    [
+      [0,0,3,3,3,3,0,0],
+      [0,3,2,2,2,2,3,0],
+      [0,2,3,2,2,3,2,0],
+      [0,2,2,2,2,2,2,0],
+      [0,0,2,7,2,7,0,0],
+      [0,2,2,2,2,2,2,0],
+      [2,0,2,0,0,2,0,2],
+      [2,0,0,0,0,0,0,0],
+    ],
+    // frame 1 - 달리기 중간1
+    [
+      [0,0,3,3,3,3,0,0],
+      [0,3,2,2,2,2,3,0],
+      [0,2,3,2,2,3,2,0],
+      [0,2,2,2,2,2,2,0],
+      [0,0,2,7,2,7,0,0],
+      [0,2,2,2,2,2,2,0],
+      [0,2,0,2,2,0,2,0],
+      [0,0,2,0,0,2,0,0],
+    ],
+    // frame 2 - 뒷다리 앞
+    [
+      [0,0,3,3,3,3,0,0],
+      [0,3,2,2,2,2,3,0],
+      [0,2,3,2,2,3,2,0],
+      [0,2,2,2,2,2,2,0],
+      [0,0,2,7,2,7,0,0],
+      [0,2,2,2,2,2,2,0],
+      [2,0,2,0,0,2,0,2],
+      [0,0,2,0,0,0,2,0],
+    ],
+    // frame 3 - 달리기 중간2
+    [
+      [0,0,3,3,3,3,0,0],
+      [0,3,2,2,2,2,3,0],
+      [0,2,3,2,2,3,2,0],
+      [0,2,2,2,2,2,2,0],
+      [0,0,2,7,2,7,0,0],
+      [0,2,2,2,2,2,2,0],
+      [0,2,0,2,2,0,2,0],
+      [2,0,0,0,0,0,0,2],
+    ],
+  ],
+  dog: [
+    [[0,3,3,0,0,3,3,0],[3,2,2,3,3,2,2,3],[2,2,3,2,2,3,2,2],[2,2,2,2,2,2,2,2],[0,2,7,2,2,7,2,0],[0,2,2,2,2,2,2,0],[2,0,2,0,0,2,0,2],[2,0,0,0,0,0,0,0]],
+    [[0,3,3,0,0,3,3,0],[3,2,2,3,3,2,2,3],[2,2,3,2,2,3,2,2],[2,2,2,2,2,2,2,2],[0,2,7,2,2,7,2,0],[0,2,2,2,2,2,2,0],[0,2,0,2,2,0,2,0],[0,0,2,0,0,2,0,0]],
+    [[0,3,3,0,0,3,3,0],[3,2,2,3,3,2,2,3],[2,2,3,2,2,3,2,2],[2,2,2,2,2,2,2,2],[0,2,7,2,2,7,2,0],[0,2,2,2,2,2,2,0],[2,0,2,0,0,2,0,2],[0,0,2,0,0,0,2,0]],
+    [[0,3,3,0,0,3,3,0],[3,2,2,3,3,2,2,3],[2,2,3,2,2,3,2,2],[2,2,2,2,2,2,2,2],[0,2,7,2,2,7,2,0],[0,2,2,2,2,2,2,0],[0,2,0,2,2,0,2,0],[2,0,0,0,0,0,0,2]],
+  ],
+  fox: [
+    [[0,2,0,0,0,0,2,0],[0,0,2,2,2,2,0,0],[0,2,3,2,2,3,2,0],[0,2,2,2,2,2,2,0],[0,0,2,7,2,7,0,0],[5,2,2,2,2,2,2,5],[2,0,2,0,0,2,0,2],[2,0,0,0,0,0,0,0]],
+    [[0,2,0,0,0,0,2,0],[0,0,2,2,2,2,0,0],[0,2,3,2,2,3,2,0],[0,2,2,2,2,2,2,0],[0,0,2,7,2,7,0,0],[5,2,2,2,2,2,2,5],[0,2,0,2,2,0,2,0],[0,0,2,0,0,2,0,0]],
+    [[0,2,0,0,0,0,2,0],[0,0,2,2,2,2,0,0],[0,2,3,2,2,3,2,0],[0,2,2,2,2,2,2,0],[0,0,2,7,2,7,0,0],[5,2,2,2,2,2,2,5],[2,0,2,0,0,2,0,2],[0,0,2,0,0,0,2,0]],
+    [[0,2,0,0,0,0,2,0],[0,0,2,2,2,2,0,0],[0,2,3,2,2,3,2,0],[0,2,2,2,2,2,2,0],[0,0,2,7,2,7,0,0],[5,2,2,2,2,2,2,5],[0,2,0,2,2,0,2,0],[2,0,0,0,0,0,0,2]],
+  ],
+  rabbit: [
+    [[0,2,0,0,0,0,2,0],[0,2,0,0,0,0,2,0],[0,0,2,2,2,2,0,0],[0,2,3,2,2,3,2,0],[0,0,2,4,2,2,0,0],[0,2,2,2,2,2,2,0],[2,0,2,0,0,2,0,2],[2,0,0,0,0,0,0,0]],
+    [[0,2,0,0,0,0,2,0],[0,2,0,0,0,0,2,0],[0,0,2,2,2,2,0,0],[0,2,3,2,2,3,2,0],[0,0,2,4,2,2,0,0],[0,2,2,2,2,2,2,0],[0,2,0,2,2,0,2,0],[0,0,2,0,0,2,0,0]],
+    [[0,2,0,0,0,0,2,0],[0,2,0,0,0,0,2,0],[0,0,2,2,2,2,0,0],[0,2,3,2,2,3,2,0],[0,0,2,4,2,2,0,0],[0,2,2,2,2,2,2,0],[2,0,2,0,0,2,0,2],[0,0,2,0,0,0,2,0]],
+    [[0,2,0,0,0,0,2,0],[0,2,0,0,0,0,2,0],[0,0,2,2,2,2,0,0],[0,2,3,2,2,3,2,0],[0,0,2,4,2,2,0,0],[0,2,2,2,2,2,2,0],[0,2,0,2,2,0,2,0],[2,0,0,0,0,0,0,2]],
+  ],
+};
+
+// ── 스프라이트 pre-render (OffscreenCanvas) ───────────────────
+const SCALE = Math.round(config.size / 8);
+const PIXEL = SCALE;
+const SPRITE_PX = 8 * PIXEL;
+
+function buildFrames(character) {
+  const palette = PALETTES[character] || PALETTES.cat;
+  const frames = (SPRITES[character] || SPRITES.cat).map(grid => {
+    const oc = new OffscreenCanvas(SPRITE_PX, SPRITE_PX);
+    const c = oc.getContext('2d');
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const idx = grid[row][col];
+        if (idx === 0) continue;
+        c.fillStyle = palette[idx];
+        c.fillRect(col * PIXEL, row * PIXEL, PIXEL, PIXEL);
+      }
+    }
+    return oc;
+  });
+  return frames;
+}
+
+const frames = buildFrames(config.character);
+
+// ── 반짝이는 파티클 ───────────────────────────────────────────
+const particles = [];
+function spawnParticle(x, y) {
+  if (Math.random() > 0.15) return;
+  particles.push({
+    x, y,
+    vx: (Math.random() - 0.5) * 2,
+    vy: -(Math.random() * 2 + 1),
+    life: 1.0,
+    size: Math.random() * 3 + 1,
+    color: ['#ffdd44','#ff9944','#44ddff','#ff44aa'][Math.floor(Math.random()*4)],
+  });
+}
+
+// ── 텍스트 버블 (가끔 생각 표시) ─────────────────────────────
+const THOUGHTS = ['💭 thinking...', '⚙️ processing...', '🔍 searching...', '✨ generating...', '🧠 analyzing...'];
+let bubble = null;
+let bubbleTimer = 0;
+
+function maybeSpawnBubble(x, y) {
+  if (bubbleTimer > 0) return;
+  if (Math.random() > 0.005) return;
+  bubble = {
+    text: THOUGHTS[Math.floor(Math.random() * THOUGHTS.length)],
+    x, y,
+    life: 1.0,
+  };
+  bubbleTimer = 120;
+}
+
+// ── 캐릭터 상태 ───────────────────────────────────────────────
+const isHorizontal = config.position === 'bottom' || config.position === 'top';
+
+const charX = { val: -SPRITE_PX };
+const charY = { val: 0 };
+
+// 수직/수평 기준 Y 위치
+let baseY, baseX;
+if (isHorizontal) {
+  baseY = Math.floor((winH - SPRITE_PX) / 2);
+  charX.val = -SPRITE_PX;
+} else {
+  baseX = Math.floor((winW - SPRITE_PX) / 2);
+  charY.val = -SPRITE_PX;
+}
+
+let frameIdx = 0;
+let frameTick = 0;
+const FRAME_INTERVAL = 6;
+const speed = config.speed;
+
+// ── 그림자 효과 ───────────────────────────────────────────────
+function drawShadow(cx, cy) {
+  ctx.save();
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.ellipse(cx + SPRITE_PX/2, cy + SPRITE_PX + 2, SPRITE_PX/2 * 0.7, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ── 다크 오버레이 배경 띠 (theme: dark 일 때) ─────────────────
+function drawBackground() {
+  if (config.theme !== 'dark') return;
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(0, 0, winW, winH);
+}
+
+// ── 메인 루프 ────────────────────────────────────────────────
+function loop() {
+  ctx.clearRect(0, 0, winW, winH);
+  drawBackground();
+
+  // 캐릭터 이동
+  let cx, cy;
+  if (isHorizontal) {
+    charX.val += speed;
+    if (charX.val > winW + SPRITE_PX) charX.val = -SPRITE_PX;
+    cx = charX.val;
+    cy = baseY;
+    // 살짝 위아래 바운스
+    cy += Math.round(Math.sin(charX.val * 0.08) * 2);
+  } else {
+    charY.val += speed;
+    if (charY.val > winH + SPRITE_PX) charY.val = -SPRITE_PX;
+    cy = charY.val;
+    cx = baseX;
+    cx += Math.round(Math.sin(charY.val * 0.08) * 2);
+  }
+
+  // 프레임 전진
+  frameTick++;
+  if (frameTick >= FRAME_INTERVAL) { frameTick = 0; frameIdx = (frameIdx + 1) % frames.length; }
+
+  // 파티클 생성 (발자국)
+  spawnParticle(cx + SPRITE_PX / 2, cy + SPRITE_PX);
+
+  // 파티클 그리기
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.life -= 0.04;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    ctx.save();
+    ctx.globalAlpha = p.life * 0.8;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+    ctx.restore();
+  }
+
+  // 그림자
+  drawShadow(cx, cy);
+
+  // 스프라이트 그리기 (방향 반전: 왼→오른 이동이면 그대로, 위→아래면 회전)
+  ctx.save();
+  if (!isHorizontal) {
+    // 세로 이동: 90도 회전
+    ctx.translate(cx + SPRITE_PX/2, cy + SPRITE_PX/2);
+    ctx.rotate(Math.PI / 2);
+    ctx.drawImage(frames[frameIdx], -SPRITE_PX/2, -SPRITE_PX/2, SPRITE_PX, SPRITE_PX);
+  } else {
+    ctx.drawImage(frames[frameIdx], cx, cy, SPRITE_PX, SPRITE_PX);
+  }
+  ctx.restore();
+
+  // 버블
+  maybeSpawnBubble(cx + SPRITE_PX, cy);
+  if (bubble) {
+    bubble.life -= 0.008;
+    if (bubble.life <= 0) { bubble = null; }
+    else {
+      ctx.save();
+      ctx.globalAlpha = Math.min(bubble.life * 2, 1);
+      ctx.font = 'bold 12px monospace';
+      ctx.fillStyle = config.theme === 'dark' ? '#fff' : '#333';
+      ctx.fillText(bubble.text, bubble.x, bubble.y - 10);
+      ctx.restore();
+    }
+  }
+  if (bubbleTimer > 0) bubbleTimer--;
+
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>
