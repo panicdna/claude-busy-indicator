@@ -13,6 +13,37 @@ Maintained by [@panicdna](https://github.com/panicdna). Both require a working d
 
 ---
 
+## How installation works
+
+Installation is **two layers**, and `install` / `uninstall` are **separate command sets** — each plugin ships its own pair.
+
+**1. Add the marketplace — once.** A single marketplace holds *both* plugins, so you run this one time no matter how many plugins you install:
+
+```
+/plugin marketplace add panicdna/claude-busy-indicator
+```
+
+**2. Then, per plugin, two steps:**
+
+- `/plugin install <plugin>` — fetches the plugin's skills into your environment (this alone does **not** start any indicator).
+- `/install-<plugin>` — the skill that actually writes the hooks into `~/.claude/settings.json` and turns the indicator on.
+
+**Removal is the reverse order:**
+
+- `/uninstall-<plugin>` — removes this plugin's hooks from `settings.json`.
+- `/plugin uninstall <plugin>` — removes the plugin package.
+
+> ⚠️ Always run `/uninstall-<plugin>` **before** `/plugin uninstall`. If you remove the plugin first, its hooks linger in `settings.json` as "ghost hooks" — the command still fires on every prompt but the skill it points to is gone.
+
+| Plugin | Plugin layer (`/plugin …`) | Setup skill | Teardown skill |
+|--------|---------------------------|-------------|----------------|
+| `busy-indicator` | `install busy-indicator` / `uninstall busy-indicator` | `/install-busy-indicator` | `/uninstall-busy-indicator` |
+| `animal-busy-indicator` | `install animal-busy-indicator` / `uninstall animal-busy-indicator` | `/install-animal-busy-indicator` | `/uninstall-animal-busy-indicator` |
+
+The two plugins are independent and can be installed side by side — their hooks use disjoint signatures (`claude-busy.pid` vs `animal-busy`), so each uninstall only removes its own.
+
+---
+
 ## `busy-indicator` — mpv video window
 
 A small `mpv` window pops up while Claude processes your prompt and closes the moment Claude finishes.
@@ -27,7 +58,7 @@ Hooks: `UserPromptSubmit` spawns mpv (looped, muted) at a configurable geometry;
 **Install:**
 
 ```
-/plugin marketplace add panicdna/claude-busy-indicator
+/plugin marketplace add panicdna/claude-busy-indicator   # one-time; skip if already added
 /plugin install busy-indicator
 /install-busy-indicator
 ```
@@ -64,7 +95,7 @@ Hooks: `UserPromptSubmit` spawns the Electron overlay (`ELECTRON_DISABLE_SANDBOX
 **Install:**
 
 ```
-/plugin marketplace add panicdna/claude-busy-indicator
+/plugin marketplace add panicdna/claude-busy-indicator   # one-time; skip if already added
 /plugin install animal-busy-indicator
 /install-animal-busy-indicator
 ```
