@@ -34,21 +34,20 @@ try {
   Object.assign(config, JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')));
 } catch (_) {}
 
-app.whenReady().then(() => {
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-
-  // 오버레이 띠 높이/너비 계산
+// Build one overlay strip for a single monitor's bounds.
+function makeWindow(bounds) {
   const STRIP = config.size + 20;
-  let winX = 0, winY = 0, winW = width, winH = STRIP;
-  if (config.position === 'top')    { winY = 0; }
-  if (config.position === 'bottom') { winY = height - STRIP; }
-  if (config.position === 'left')   { winW = STRIP; winH = height; winX = 0; winY = 0; }
-  if (config.position === 'right')  { winW = STRIP; winH = height; winX = width - STRIP; winY = 0; }
+  let winX, winY, winW, winH;
+  if (config.position === 'top')         { winX = bounds.x; winY = bounds.y;                          winW = bounds.width; winH = STRIP; }
+  else if (config.position === 'bottom') { winX = bounds.x; winY = bounds.y + bounds.height - STRIP;  winW = bounds.width; winH = STRIP; }
+  else if (config.position === 'left')   { winX = bounds.x; winY = bounds.y; winW = STRIP; winH = bounds.height; }
+  else if (config.position === 'right')  { winX = bounds.x + bounds.width - STRIP; winY = bounds.y; winW = STRIP; winH = bounds.height; }
+  else { winX = bounds.x; winY = bounds.y + bounds.height - STRIP; winW = bounds.width; winH = STRIP; }
 
-  // WSLg/Weston does not composite transparent frameless windows — the whole
-  // window (content included) renders invisible. The 'dark' theme therefore
-  // uses a real OPAQUE window so it actually shows on WSL2. 'transparent' keeps
-  // the see-through strip for native Linux/X11 that supports it.
+  // WSLg/Weston does not composite transparent frameless windows — content
+  // renders invisible. The 'dark' theme uses a real OPAQUE window so it shows
+  // on WSL2; 'transparent' keeps the see-through strip where the compositor
+  // supports it.
   const isDark = config.theme === 'dark';
   const win = new BrowserWindow({
     x: winX, y: winY,
@@ -60,23 +59,30 @@ app.whenReady().then(() => {
     skipTaskbar: true,
     resizable: false,
     focusable: false,
+    enableLargerThanScreen: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
     }
   });
-
   win.setIgnoreMouseEvents(true);
-  // Pass config via the URL query — readable from the isolated renderer.
+  // Pass config + this monitor's strip size via the URL query.
   win.loadFile(path.join(__dirname, 'overlay.html'), {
     search: 'config=' + encodeURIComponent(JSON.stringify(config)) + `&winW=${winW}&winH=${winH}`,
   });
+  return win;
+}
 
-  // PID 저장
+app.whenReady().then(() => {
+  // One overlay per monitor — the animal runs on every display. Uses each
+  // display's full bounds (edge-to-edge), not workArea.
+  const wins = screen.getAllDisplays().map(d => makeWindow(d.bounds));
+  console.log(`[animal-busy] ${wins.length} overlay window(s) across ${wins.length} display(s)`);
+
+  // One process owns all windows → a single PID controls them all.
   fs.mkdirSync(path.dirname(PID_FILE), { recursive: true });
   fs.writeFileSync(PID_FILE, String(process.pid));
 
-  // SIGTERM 수신 시 정상 종료
   process.on('SIGTERM', () => {
     try { fs.unlinkSync(PID_FILE); } catch (_) {}
     app.quit();

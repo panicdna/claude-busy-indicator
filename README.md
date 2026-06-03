@@ -42,7 +42,7 @@ The install skill asks which video and window size you want, then merges the hoo
 
 ## `animal-busy-indicator` — pixel-art animal overlay
 
-A transparent Electron overlay draws a running pixel-art animal across a screen-edge strip while Claude works, then vanishes when the response completes. Pure `<canvas>` sprites (no image assets) with footstep particles and occasional thought bubbles.
+A transparent Electron overlay draws a running pixel-art animal across a screen-edge strip while Claude works, then vanishes when the response completes. Pure `<canvas>` sprites (no image assets) with footstep particles and occasional thought bubbles. Spans **every monitor** — one strip per display, all driven by a single process.
 
 | Skill | Trigger | Behavior |
 |-------|---------|----------|
