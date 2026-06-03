@@ -45,6 +45,19 @@ if (command === 'stop') {
 }
 
 // ── start ─────────────────────────────────────────────────────
+// Guard against double-spawn: if a previous overlay is still alive, do nothing.
+// Without this, a missed Stop hook (or rapid prompts) would orphan the old
+// Electron and overwrite its PID, leaking windows.
+try {
+  const prev = parseInt(fs.readFileSync(PID_FILE, 'utf8').trim(), 10);
+  process.kill(prev, 0); // throws if the process is gone
+  console.log(`[animal-busy] already running (PID ${prev}) — not spawning`);
+  process.exit(0);
+} catch (_) {
+  // No PID file, or the recorded process is dead — clear stale PID and continue.
+  try { fs.unlinkSync(PID_FILE); } catch (_) {}
+}
+
 const electronBin = getElectron();
 if (!electronBin) {
   console.error('[animal-busy] electron not found. Run `npm install` in ' + ROOT);
