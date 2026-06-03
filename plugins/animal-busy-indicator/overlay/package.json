@@ -1,0 +1,14 @@
+{
+  "name": "animal-busy-overlay",
+  "version": "1.0.0",
+  "description": "Transparent pixel-art animal overlay for Claude Code",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron . start",
+    "stop":  "electron . stop"
+  },
+  "dependencies": {
+    "electron": "^30.0.0"
+  }
+}

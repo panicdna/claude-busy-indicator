@@ -4,12 +4,17 @@
     "name": "panicdna",
     "url": "https://github.com/panicdna"
   },
-  "description": "A Claude Code skills marketplace for the desktop busy indicator (WSL2/WSLg mpv hook). Bundles install/uninstall skills.",
+  "description": "A Claude Code skills marketplace for desktop busy indicators. Pick one: an mpv video window (WSL2/WSLg) or a pixel-art animal overlay (Electron). Each plugin bundles install/uninstall skills.",
   "plugins": [
     {
       "name": "busy-indicator",
       "source": "./plugins/busy-indicator",
-      "description": "Desktop video busy indicator for Claude Code on WSL2/WSLg. Bundles the 'install-busy-indicator' and 'uninstall-busy-indicator' skills."
+      "description": "Desktop video busy indicator for Claude Code on WSL2/WSLg. Plays a looped mpv video window while Claude works. Bundles the 'install-busy-indicator' and 'uninstall-busy-indicator' skills."
+    },
+    {
+      "name": "animal-busy-indicator",
+      "source": "./plugins/animal-busy-indicator",
+      "description": "Transparent pixel-art animal overlay busy indicator. Runs a pixel-art animal (cat/dog/fox/rabbit) along a screen edge via a frameless Electron window while Claude works. Bundles the 'install-animal-busy-indicator' and 'uninstall-animal-busy-indicator' skills."
     }
   ]
 }

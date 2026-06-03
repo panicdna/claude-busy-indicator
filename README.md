@@ -1,12 +1,53 @@
 # claude-busy-indicator
 
-A [Claude Code](https://docs.claude.com/en/docs/claude-code) skills marketplace that installs a **desktop video busy indicator** for Claude Code on WSL2 / WSLg.
+A [Claude Code](https://docs.claude.com/en/docs/claude-code) plugin marketplace
+of **desktop busy indicators** — a glanceable on-screen signal that Claude is
+working, useful when Claude Code runs in a terminal that isn't in focus.
 
-A small `mpv` window pops up while Claude is processing your prompt, and closes the moment Claude finishes. Useful when Claude Code is running in a terminal that's not in focus and you want a glanceable signal that work is in progress.
+Two plugins to choose from:
+
+| Plugin | What appears | Runtime | Best for |
+|--------|--------------|---------|----------|
+| **`busy-indicator`** | A small looped video window | `mpv` (WSL2/WSLg) | Lightest setup; no Node build step |
+| **`animal-busy-indicator`** | A pixel-art animal running along a screen edge | Electron (transparent overlay) | Playful, click-through overlay; configurable character/position |
 
 Maintained by [@panicdna](https://github.com/panicdna).
 
-## What it does
+## Quick start
+
+Inside a Claude Code session, add the marketplace once:
+
+```
+/plugin marketplace add panicdna/claude-busy-indicator
+```
+
+Then install **one** of the plugins (or both — they use independent hooks and
+detection signatures, so they don't collide):
+
+```
+/plugin install busy-indicator
+# or
+/plugin install animal-busy-indicator
+```
+
+Finally, run the matching install skill once to wire up the hooks:
+
+```
+/install-busy-indicator
+# or
+/install-animal-busy-indicator
+```
+
+Both install skills run pre-flight checks, ask for your preferences, smoke-test
+the indicator standalone, then merge hooks into `~/.claude/settings.json`. Open
+`/hooks` once afterward to reload settings, and you're done.
+
+---
+
+## Plugin: `busy-indicator` (mpv video)
+
+A small `mpv` window plays a looped, muted video while Claude is processing, and
+closes the moment Claude finishes.
 
 | Skill | Trigger | Behavior |
 |-------|---------|----------|
@@ -17,46 +58,71 @@ Hooks installed:
 - `UserPromptSubmit` — spawns mpv (looped, muted) at a configurable geometry
 - `Stop` — kills the spawned mpv via a PID file
 
-Both hooks are idempotent and detected by a unique `claude-busy.pid` substring, so uninstall never touches unrelated hooks.
+Both hooks are idempotent and detected by a unique `claude-busy.pid` substring,
+so uninstall never touches unrelated hooks.
 
-## Installation (for colleagues)
-
-Inside a Claude Code session:
-
-```
-/plugin marketplace add panicdna/claude-busy-indicator
-/plugin install busy-indicator
-```
-
-Then invoke the install skill once:
-
-```
-/install-busy-indicator
-```
-
-It will ask you which video to use, what window size you want, and merge the hooks into `~/.claude/settings.json`. Open `/hooks` once to reload settings, and you're done.
-
-## Requirements
-
+**Requirements**
 - **WSL2 with WSLg** (or any Linux with a working X display)
-- `mpv` and `ffmpeg` — install via `sudo apt install -y mpv ffmpeg`
+- `mpv` and `ffmpeg` — `sudo apt install -y mpv ffmpeg`
 - `jq` — used to safely merge into `settings.json`
 
-The install skill performs pre-flight checks for all of these and tells you exactly what to run if anything is missing.
-
-## Removing
-
+**Install / remove**
 ```
-/uninstall-busy-indicator
+/install-busy-indicator      # set up
+/uninstall-busy-indicator    # tear down (asks before deleting the cached video)
 /plugin uninstall busy-indicator
 ```
 
-The uninstall skill leaves all other hooks/settings untouched. It will also ask before deleting the cached video (which can be up to ~557 MB for the Tears of Steel option).
+---
+
+## Plugin: `animal-busy-indicator` (pixel-art Electron overlay)
+
+A frameless, transparent, click-through Electron window shows a running pixel-art
+animal along a screen edge while Claude works, and is killed when Claude
+finishes.
+
+| Skill | Trigger | Behavior |
+|-------|---------|----------|
+| `install-animal-busy-indicator` | `/install-animal-busy-indicator` | Environment check → copy bundled overlay + `npm install electron` → config → smoke test → settings.json hook merge → reload guidance |
+| `uninstall-animal-busy-indicator` | `/uninstall-animal-busy-indicator` | Kill running overlay → remove only our hooks → optional file delete → reload guidance |
+
+Hooks installed (both carry a unique `animal-busy.pid` detection signature):
+- `UserPromptSubmit` — `node ~/.claude/animal-busy/animal-busy.js start`
+- `Stop` — `node ~/.claude/animal-busy/animal-busy.js stop`
+
+**Configurable** (asked at install, stored in `~/.claude/animal-busy-config.json`):
+
+| Setting | Options | Default |
+|---|---|---|
+| Character | cat / dog / fox / rabbit | cat |
+| Position | bottom / top / left / right | bottom |
+| Size (px) | 32 / 48 / 64 / 96 | 64 |
+| Speed | 1–8 | 3 |
+| Theme | transparent / dark | transparent |
+
+Edit that JSON file and the next prompt picks up the change — no reinstall
+needed.
+
+**Requirements**
+- A working GUI display: **WSL2 with WSLg**, or native Linux with X/Wayland
+- **Node.js ≥ 18** and **npm** — `sudo apt install -y nodejs npm`
+- `jq` — used to safely merge into `settings.json`
+- The first install runs `npm install electron` (~100 MB download)
+
+**Install / remove**
+```
+/install-animal-busy-indicator     # set up (downloads Electron the first time)
+/uninstall-animal-busy-indicator   # tear down (asks before deleting the Electron app)
+/plugin uninstall animal-busy-indicator
+```
+
+---
 
 ## Update later
 
 ```
 /plugin update busy-indicator
+/plugin update animal-busy-indicator
 ```
 
 ## Repository structure
@@ -64,26 +130,40 @@ The uninstall skill leaves all other hooks/settings untouched. It will also ask 
 ```
 claude-busy-indicator/
 ├── .claude-plugin/
-│   └── marketplace.json                    # Marketplace manifest (cataloged plugins)
+│   └── marketplace.json                          # Marketplace manifest (both plugins cataloged)
 ├── plugins/
-│   └── busy-indicator/
-│       ├── .claude-plugin/
-│       │   └── plugin.json                 # Plugin manifest
+│   ├── busy-indicator/
+│   │   ├── .claude-plugin/plugin.json
+│   │   └── skills/
+│   │       ├── install-busy-indicator/SKILL.md
+│   │       └── uninstall-busy-indicator/SKILL.md
+│   └── animal-busy-indicator/
+│       ├── .claude-plugin/plugin.json
+│       ├── animal-busy.js                         # Hook entry point (spawn/stop Electron)
+│       ├── overlay/                               # Electron overlay app
+│       │   ├── main.js                            # Frameless transparent window
+│       │   ├── overlay.html                       # Pixel-art animal canvas renderer
+│       │   └── package.json                       # electron dependency
 │       └── skills/
-│           ├── install-busy-indicator/
-│           │   └── SKILL.md                # Install procedure Claude reads
-│           └── uninstall-busy-indicator/
-│               └── SKILL.md                # Uninstall procedure Claude reads
+│           ├── install-animal-busy-indicator/SKILL.md
+│           └── uninstall-animal-busy-indicator/SKILL.md
 ├── README.md
 └── LICENSE
 ```
 
 ## Design notes
 
-- **Idempotent install** — re-running `/install-busy-indicator` reconfigures (different video, size, position) without needing to uninstall first.
-- **Pipe-test before writing settings** — the install skill spawns/kills mpv standalone before touching `settings.json`, so you don't end up with a broken hook config.
-- **Detection signature** — every hook the plugin owns contains the string `claude-busy.pid`. Uninstall uses this to surgically remove only this plugin's hooks.
-- **Cache deletion is opt-in** — uninstall always asks before deleting the cached video to avoid surprise re-downloads.
+- **Idempotent install** — re-running an install skill reconfigures (different
+  video / character / size / position) without needing to uninstall first.
+- **Smoke-test before writing settings** — each install spawns and kills the
+  indicator standalone before touching `settings.json`, so you never end up with
+  a broken hook config.
+- **Surgical detection signatures** — `busy-indicator` hooks all contain
+  `claude-busy.pid`; `animal-busy-indicator` hooks all contain `animal-busy.pid`.
+  Uninstall uses these to remove only that plugin's hooks, and the two plugins
+  can be installed side by side without interfering.
+- **Cleanup is opt-in** — uninstall always asks before deleting the cached video
+  (busy-indicator) or the installed Electron app (animal-busy-indicator).
 
 ## License
 
