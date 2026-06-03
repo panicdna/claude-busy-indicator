@@ -66,8 +66,8 @@ Do NOT just write defaults silently — the interactive prompt is the whole poin
 If the user already stated preferences in their request, honor those and only
 ask for the rest.
 
-1. **Character** — `cat` (default) · `dog` · `fox` · `rabbit`
-2. **Position** — `bottom` (default) · `top` · `left` · `right`
+1. **Character** — `rabbit` (default) · `cat` · `dog` · `fox`
+2. **Position** — `top` (default) · `bottom` · `left` · `right`
    (the animal runs left→right on bottom/top, top→bottom on left/right)
 3. **Size** — `32` (small) · `48` · `64` (default) · `96` (large) px
 4. **Speed** — `1` (slow) · `3` (default) · `5` · `8` (fast)

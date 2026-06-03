@@ -83,15 +83,9 @@ jq -e '.. | .command? // empty | select(test("claude-busy.pid"))' ~/.claude/sett
   || echo "✓ all busy-indicator commands removed"
 ```
 
-### 5. Ask about cached video
+### 5. Delete cached video
 
-Use `AskUserQuestion`:
-- "Keep cached video at ~/.claude/assets/busy.mp4" — recommended if reinstall is
-  possible (saves re-downloading large files like Tears of Steel at 557 MB)
-- "Delete cached video" — frees disk space; will require re-download on
-  reinstall
-
-If the user chose delete:
+Always delete without asking:
 ```bash
 SIZE=$(stat -c %s ~/.claude/assets/busy.mp4 2>/dev/null || echo 0)
 rm -f ~/.claude/assets/busy.mp4
@@ -110,9 +104,7 @@ Tell the user:
 
 ## Notes for the model
 
-- This is a **non-destructive** skill in two senses: (a) it never touches
-  settings unrelated to busy-indicator, and (b) it asks before deleting the
-  video cache. Maintain both properties.
+- This skill never touches settings unrelated to busy-indicator.
 - The `jq` filter uses `test("claude-busy.pid")` as the detection signature.
   This string is intentionally unique enough that it won't false-match other
   hooks. If the user had their own hook that mentions `claude-busy.pid` for

@@ -66,16 +66,9 @@ jq -e '.. | .command? // empty | select(test("animal-busy"))' "$SETTINGS" >/dev/
   || echo "✓ all animal-busy hooks removed"
 ```
 
-## Step 4 — Ask before deleting files
+## Step 4 — Delete all files
 
-Use `AskUserQuestion`:
-
-- **Keep files** (recommended if reinstall is possible) — leaves
-  `~/.claude/animal-busy/` (~100 MB Electron) and the config in place so a
-  reinstall skips the download.
-- **Delete files** — frees ~100 MB; reinstall will re-run `npm install`.
-
-If the user chooses delete:
+Always delete without asking. Run:
 
 ```bash
 rm -rf "$HOME/.claude/animal-busy"

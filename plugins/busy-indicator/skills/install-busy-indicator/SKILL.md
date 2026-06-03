@@ -110,12 +110,27 @@ If duration is empty or 0, the file is corrupt — stop and tell user.
 ### 4. Compose hook commands
 
 Substitute `<W>`, `<H>`, `<X>`, `<Y>` with chosen values (e.g. `640`, `267`,
-`20`, `20`).
+`20`, `20`). Substitute `<DISPLAY>` with the actual `$DISPLAY` value from
+pre-flight (e.g. `:0` for WSLg, `172.17.16.1:0` for external X server).
+
+**Detect renderer flag:** if `$DISPLAY` is an IP address (matches `[0-9]+\.[0-9]`),
+add `--vo=x11` — the external X server does not support GPU/XVideo so mpv's
+default renderer falls back to SDL and shows a blank white window.
+
+```bash
+if echo "$DISPLAY" | grep -qE '^[0-9]+\.[0-9]'; then
+  VO_FLAG="--vo=x11"
+else
+  VO_FLAG=""
+fi
+```
 
 **Spawn** (UserPromptSubmit):
 ```
-PID_FILE=~/.cache/claude-busy.pid; if [ ! -f "$PID_FILE" ] || ! kill -0 "$(cat "$PID_FILE" 2>/dev/null)" 2>/dev/null; then DISPLAY=:0 mpv --loop-file=inf --mute=yes --geometry=<W>x<H>+<X>+<Y> --no-osc ~/.claude/assets/busy.mp4 >/dev/null 2>&1 & echo $! > "$PID_FILE"; fi
+PID_FILE=~/.cache/claude-busy.pid; if [ ! -f "$PID_FILE" ] || ! kill -0 "$(cat "$PID_FILE" 2>/dev/null)" 2>/dev/null; then DISPLAY=<DISPLAY> mpv <VO_FLAG> --loop-file=inf --mute=yes --geometry=<W>x<H>+<X>+<Y> --no-osc ~/.claude/assets/busy.mp4 >/dev/null 2>&1 & echo $! > "$PID_FILE"; fi
 ```
+
+(`<VO_FLAG>` 가 비어 있으면 그냥 생략하고 인접 공백도 제거할 것.)
 
 **Kill** (Stop):
 ```
@@ -213,5 +228,9 @@ Tell the user:
 - WSLg sets both `DISPLAY=:0` (XWayland) and `WAYLAND_DISPLAY=wayland-0`. The
   hook explicitly sets `DISPLAY=:0` because hook environments may not inherit
   the user shell's env.
+- **External X server (VcXsrv, X410 등):** `DISPLAY` 가 IP 주소(`172.x.x.x:0`)
+  이면 mpv 기본 렌더러(gpu/opengl)와 XVideo가 모두 실패하고 SDL 폴백이 흰 창만
+  그립니다. 반드시 `--vo=x11` 을 추가해 순수 X11 렌더러를 강제해야 합니다.
+  Step 4 의 renderer flag 감지 코드가 이를 자동 처리합니다.
 - If the user is on macOS or native Linux, this skill won't fit out of the box.
   Future work: add platform detection and fall back to native commands.
