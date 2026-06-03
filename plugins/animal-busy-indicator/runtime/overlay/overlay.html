@@ -12,17 +12,13 @@
 <canvas id="c"></canvas>
 <script>
 // ── 설정 파싱 ──────────────────────────────────────────────────
-const args = process?.argv || [];
+// config 는 URL query 로 전달된다 (main.js 의 loadFile search). process.argv
+// 는 contextIsolation 렌더러에서 차단되므로 사용하지 않는다.
 let config = { character: 'cat', position: 'bottom', size: 64, speed: 3, theme: 'transparent' };
-let winW = window.innerWidth, winH = window.innerHeight;
-
-for (const a of args) {
-  if (a.startsWith('--config=')) {
-    try { Object.assign(config, JSON.parse(a.slice(9))); } catch(_) {}
-  }
-  if (a.startsWith('--winW=')) winW = parseInt(a.slice(7));
-  if (a.startsWith('--winH=')) winH = parseInt(a.slice(7));
-}
+const params = new URLSearchParams(location.search);
+try { Object.assign(config, JSON.parse(params.get('config') || '{}')); } catch (_) {}
+let winW = parseInt(params.get('winW')) || window.innerWidth;
+let winH = parseInt(params.get('winH')) || window.innerHeight;
 
 const canvas = document.getElementById('c');
 canvas.width  = winW;

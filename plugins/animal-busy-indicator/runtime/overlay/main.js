@@ -45,10 +45,16 @@ app.whenReady().then(() => {
   if (config.position === 'left')   { winW = STRIP; winH = height; winX = 0; winY = 0; }
   if (config.position === 'right')  { winW = STRIP; winH = height; winX = width - STRIP; winY = 0; }
 
+  // WSLg/Weston does not composite transparent frameless windows — the whole
+  // window (content included) renders invisible. The 'dark' theme therefore
+  // uses a real OPAQUE window so it actually shows on WSL2. 'transparent' keeps
+  // the see-through strip for native Linux/X11 that supports it.
+  const isDark = config.theme === 'dark';
   const win = new BrowserWindow({
     x: winX, y: winY,
     width: winW, height: winH,
-    transparent: true,
+    transparent: !isDark,
+    backgroundColor: isDark ? '#11141a' : '#00000000',
     frame: false,
     alwaysOnTop: true,
     skipTaskbar: true,
@@ -57,16 +63,14 @@ app.whenReady().then(() => {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      additionalArguments: [
-        `--config=${JSON.stringify(config)}`,
-        `--winW=${winW}`,
-        `--winH=${winH}`,
-      ]
     }
   });
 
   win.setIgnoreMouseEvents(true);
-  win.loadFile(path.join(__dirname, 'overlay.html'));
+  // Pass config via the URL query — readable from the isolated renderer.
+  win.loadFile(path.join(__dirname, 'overlay.html'), {
+    search: 'config=' + encodeURIComponent(JSON.stringify(config)) + `&winW=${winW}&winH=${winH}`,
+  });
 
   // PID 저장
   fs.mkdirSync(path.dirname(PID_FILE), { recursive: true });

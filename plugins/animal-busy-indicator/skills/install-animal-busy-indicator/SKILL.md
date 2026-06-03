@@ -71,8 +71,12 @@ ask for the rest.
    (the animal runs left→right on bottom/top, top→bottom on left/right)
 3. **Size** — `32` (small) · `48` · `64` (default) · `96` (large) px
 4. **Speed** — `1` (slow) · `3` (default) · `5` · `8` (fast)
-5. **Theme** — `transparent` (default, edge strip is see-through) · `dark`
-   (a semi-opaque dark band behind the animal for contrast)
+5. **Theme** — `transparent` (edge strip is see-through; native Linux/X11 only)
+   · `dark` (an OPAQUE dark band behind the animal)
+   ⚠️ **On WSL2/WSLg, transparent frameless windows are not composited and
+   render fully invisible — recommend `dark` there.** If the pre-flight showed
+   `WAYLAND=wayland-0` (WSLg), default to `dark` unless the user insists on
+   transparent. The `dark` theme uses a real opaque window so it always shows.
 
 Then write the config with the chosen values substituted:
 
